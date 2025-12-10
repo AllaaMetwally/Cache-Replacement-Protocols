@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRU Cache Replacement Policy Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 30px;
+            gap: 30px;
+        }
+        
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .simulation {
+            flex: 3;
+            min-width: 500px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        h2 {
+            color: #4a00e0;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        input, button, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4a00e0;
+            box-shadow: 0 0 0 3px rgba(74, 0, 224, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(74, 0, 224, 0.2);
+        }
+        
+        .cache-mru-section {
+            margin: 30px 0;
+        }
+        
+        .cache-mru-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(74, 0, 224, 0.2);
+        }
+        
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .visualization-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .visualization-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .panel-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #495057;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .cache-blocks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .cache-block {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            position: relative;
+            min-height: 70px;
+        }
+        
+        .cache-block.empty {
+            background: #e9ecef;
+            color: #adb5bd;
+            border: 2px dashed #adb5bd;
+        }
+        
+        .cache-block.hit {
+            animation: hitGlow 0.5s ease;
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+        }
+        
+        .cache-block.miss {
+            animation: missGlow 0.5s ease;
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+        
+        .cache-block.mru {
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        
+        .cache-block.lru {
+            border: 3px solid #8e9eab;
+            box-shadow: 0 0 15px rgba(142, 158, 171, 0.5);
+        }
+        
+        .block-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+        }
+        
+        .block-index {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .block-value {
+            font-size: 1.5rem;
+        }
+        
+        .block-status {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .stack-container {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 5px;
+            min-height: 250px;
+            justify-content: flex-start;
+            position: relative;
+        }
+        
+        .stack-block {
+            width: 120px;
+            padding: 15px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #36d1dc, #5b86e5);
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stack-block.top {
+            background: linear-gradient(135deg, #ffd700, #ff9500);
+            border: 2px solid #ff9500;
+        }
+        
+        .stack-block.bottom {
+            background: linear-gradient(135deg, #8e9eab, #eef2f3);
+            color: #495057;
+            border: 2px solid #8e9eab;
+        }
+        
+        .stack-label {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+        
+        .stack-arrow {
+            font-size: 1.5rem;
+            color: #4a00e0;
+            margin: 5px 0;
+            text-align: center;
+        }
+        
+        .stack-line {
+            width: 2px;
+            height: 20px;
+            background: #4a00e0;
+            margin: 0 auto;
+        }
+        
+        .stack-empty {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+            border: 2px dashed #adb5bd;
+        }
+        
+        @keyframes hitGlow {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes missGlow {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        
+        .reference-sequence-container {
+            margin: 30px 0;
+        }
+        
+        .reference-sequence {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: center;
+        }
+        
+        .reference-block {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: #dee2e6;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .reference-block.current {
+            background: #4a00e0;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(74, 0, 224, 0.5);
+        }
+        
+        .reference-block.processed {
+            background: #adb5bd;
+            color: white;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4a00e0;
+            margin: 10px 0;
+        }
+        
+        .log {
+            margin-top: 25px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        
+        .log-entry.hit {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .log-entry.miss {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .log-entry.evict {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .status-bar {
+            padding: 15px;
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .instructions {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .mru-color {
+            background: #ffd700;
+        }
+        
+        .lru-color {
+            background: #8e9eab;
+        }
+        
+        .hit-color {
+            background: #28a745;
+        }
+        
+        .miss-color {
+            background: #dc3545;
+        }
+        
+        .empty-color {
+            background: #e9ecef;
+            border: 1px dashed #adb5bd;
+        }
+        
+        .cache-mru-note {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .controls, .simulation {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MRU Cache Replacement Policy Simulator</h1>
+            <div class="subtitle">Visualize Most Recently Used Cache Replacement Algorithm</div>
+        </header>
+        
+        <div class="content">
+            <div class="controls">
+                <h2>Configuration</h2>
+                
+                <div class="form-group">
+                    <label for="cacheSize">Cache Size (Blocks)</label>
+                    <input type="number" id="cacheSize" min="1" max="10" value="4">
+                </div>
+                
+                <div class="form-group">
+                    <label for="referenceSequence">Reference Sequence (comma-separated)</label>
+                    <input type="text" id="referenceSequence" value="9, 6, 1, 2, 6, 8, 5, 4, 2, 8, 6">
+                </div>
+                
+                <button id="simulateBtn">Run Simulation</button>
+                <button id="stepBtn" style="background: linear-gradient(to right, #00b09b, #96c93d);">Next Step</button>
+                <button id="resetBtn" style="background: linear-gradient(to right, #ff416c, #ff4b2b);">Reset</button>
+                
+                <div class="instructions">
+                    <p><strong>How to use:</strong></p>
+                    <p>1. Set cache size (default: 4)</p>
+                    <p>2. Enter memory reference sequence</p>
+                    <p>3. Click "Run Simulation" to see final result</p>
+                    <p>4. Use "Next Step" to see step-by-step execution</p>
+                    <p><strong>MRU Policy:</strong> Evicts the most recently used block on cache miss when cache is full.</p>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color mru-color"></div>
+                        <span>MRU Block</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color lru-color"></div>
+                        <span>LRU Block</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color hit-color"></div>
+                        <span>Hit</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color miss-color"></div>
+                        <span>Miss</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color empty-color"></div>
+                        <span>Empty Block</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="simulation">
+                <div class="status-bar" id="statusBar">
+                    Ready to simulate MRU cache replacement
+                </div>
+                
+                <!-- Combined Cache Memory & MRU Stack Section -->
+                <div class="cache-mru-section">
+                    <div class="section-header">
+                        <div class="section-title">Cache Memory & MRU Stack</div>
+                    </div>
+                    
+                    <div class="cache-mru-container">
+                        <div class="visualization-grid">
+                            <!-- Cache Memory Panel -->
+                            <div class="visualization-panel">
+                                <div class="panel-title">Cache Memory (Fixed Blocks)</div>
+                                <div class="cache-blocks-container" id="cacheBlocks">
+                                    <!-- Cache blocks will be generated here -->
+                                </div>
+                                <div class="cache-mru-note">
+                                    Each block has a fixed position in cache memory
+                                </div>
+                            </div>
+                            
+                            <!-- MRU Stack Panel -->
+                            <div class="visualization-panel">
+                                <div class="panel-title">MRU Stack (Top = MRU, Bottom = LRU)</div>
+                                <div class="stack-container" id="mruStack">
+                                    <!-- MRU stack will be generated here -->
+                                </div>
+                                <div class="stack-arrow">↑</div>
+                                <div style="text-align: center; font-size: 0.9rem; color: #495057; margin-top: 5px;">
+                                    Top = Most Recently Used (Next to be evicted)
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="cache-mru-note" style="margin-top: 20px;">
+                            <strong>Note:</strong> MRU stack shows the order of usage. When cache is full and a miss occurs, 
+                            the block at the TOP of the stack (most recently used) is evicted.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reference-sequence-container">
+                    <h2>Reference Sequence</h2>
+                    <div class="reference-sequence" id="referenceSequenceDisplay">
+                        <!-- Reference blocks will be generated here -->
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div>Total References</div>
+                        <div class="stat-value" id="totalRefs">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Hits</div>
+                        <div class="stat-value" id="hits">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Misses</div>
+                        <div class="stat-value" id="misses">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Hit Ratio</div>
+                        <div class="stat-value" id="hitRatio">0%</div>
+                    </div>
+                </div>
+                
+                <h2>Execution Log</h2>
+                <div class="log" id="executionLog">
+                    <!-- Log entries will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MRUCache {
+            constructor(size) {
+                this.size = size;
+                this.cache = new Array(size).fill(null); // Fixed cache blocks - each position can be null or a value
+                this.blockMap = new Map(); // Maps values to their block positions
+                this.mruStack = []; // Stack representation (top = MRU, bottom = LRU)
+                this.hits = 0;
+                this.misses = 0;
+                this.accessLog = [];
+            }
+            
+            access(value) {
+                let hit = false;
+                let evicted = null;
+                let stackOperation = '';
+                let cachePosition = -1;
+                
+                // Check if value is in cache (using blockMap)
+                const existingPosition = this.blockMap.get(value);
+                
+                if (existingPosition !== undefined) {
+                    // HIT - Value exists in cache
+                    hit = true;
+                    this.hits++;
+                    cachePosition = existingPosition;
+                    
+                    // Update MRU stack - move to top
+                    const stackIndex = this.mruStack.indexOf(value);
+                    if (stackIndex !== -1) {
+                        this.mruStack.splice(stackIndex, 1);
+                    }
+                    this.mruStack.unshift(value);
+                    stackOperation = `HIT: ${value} moved to top of MRU stack`;
+                } else {
+                    // MISS
+                    this.misses++;
+                    
+                    // Find first empty block
+                    let emptyBlockIndex = -1;
+                    for (let i = 0; i < this.size; i++) {
+                        if (this.cache[i] === null) {
+                            emptyBlockIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (emptyBlockIndex !== -1) {
+                        // Cache has empty space - put value in first empty block
+                        cachePosition = emptyBlockIndex;
+                        this.cache[cachePosition] = value;
+                        this.blockMap.set(value, cachePosition);
+                        this.mruStack.unshift(value);
+                        stackOperation = `MISS: ${value} added to empty Block ${cachePosition}`;
+                    } else {
+                        // Cache is full - need to evict MRU
+                        const mruValue = this.mruStack[0]; // Most recently used is at top
+                        const mruPosition = this.blockMap.get(mruValue);
+                        
+                        // Evict MRU from its position
+                        evicted = mruValue;
+                        this.cache[mruPosition] = null;
+                        this.blockMap.delete(mruValue);
+                        
+                        // Remove MRU from stack
+                        this.mruStack.shift();
+                        
+                        // Put new value in the evicted position
+                        cachePosition = mruPosition;
+                        this.cache[cachePosition] = value;
+                        this.blockMap.set(value, cachePosition);
+                        this.mruStack.unshift(value);
+                        stackOperation = `MISS: Evicted MRU ${evicted} from Block ${cachePosition}, added ${value}`;
+                    }
+                }
+                
+                // Log this access
+                this.accessLog.push({
+                    value,
+                    hit,
+                    evicted,
+                    stackOperation,
+                    cachePosition,
+                    cacheState: [...this.cache],
+                    mruStack: [...this.mruStack]
+                });
+                
+                return { 
+                    hit, 
+                    evicted, 
+                    stackOperation,
+                    cachePosition,
+                    cacheState: [...this.cache],
+                    mruStack: [...this.mruStack]
+                };
+            }
+            
+            reset() {
+                this.cache = new Array(this.size).fill(null);
+                this.blockMap.clear();
+                this.mruStack = [];
+                this.hits = 0;
+                this.misses = 0;
+                this.accessLog = [];
+            }
+            
+            getHitRatio() {
+                const total = this.hits + this.misses;
+                return total > 0 ? (this.hits / total) * 100 : 0;
+            }
+        }
+
+        // DOM Elements
+        const cacheSizeInput = document.getElementById('cacheSize');
+        const referenceSequenceInput = document.getElementById('referenceSequence');
+        const simulateBtn = document.getElementById('simulateBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const cacheBlocks = document.getElementById('cacheBlocks');
+        const mruStack = document.getElementById('mruStack');
+        const referenceSequenceDisplay = document.getElementById('referenceSequenceDisplay');
+        const statusBar = document.getElementById('statusBar');
+        const totalRefsEl = document.getElementById('totalRefs');
+        const hitsEl = document.getElementById('hits');
+        const missesEl = document.getElementById('misses');
+        const hitRatioEl = document.getElementById('hitRatio');
+        const executionLog = document.getElementById('executionLog');
+
+        let mruCache;
+        let currentStep = 0;
+        let referenceSequence = [];
+
+        // Parse sequence from input field
+        function getCurrentSequence() {
+            const seq = referenceSequenceInput.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            return seq;
+        }
+
+        // Initialize
+        function initialize() {
+            const size = parseInt(cacheSizeInput.value);
+            referenceSequence = getCurrentSequence();
+            
+            mruCache = new MRUCache(size);
+            currentStep = 0;
+            
+            updateCacheVisualization();
+            updateMRUStackVisualization();
+            updateReferenceSequenceDisplay();
+            updateStats();
+            clearLog();
+            
+            // تم إزالة "Sequence: X references" من هنا
+            statusBar.textContent = `Ready to simulate MRU cache with ${size} blocks`;
+            stepBtn.disabled = false;
+        }
+
+        function updateCacheVisualization() {
+            cacheBlocks.innerHTML = '';
+            
+            if (!mruCache) return;
+            
+            for (let i = 0; i < mruCache.size; i++) {
+                const block = document.createElement('div');
+                block.className = 'cache-block';
+                
+                const value = mruCache.cache[i];
+                
+                if (value !== null) {
+                    block.innerHTML = `
+                        <div class="block-info">
+                            <div class="block-index">Block ${i}</div>
+                            <div class="block-value">${value}</div>
+                            <div class="block-status">${i === 0 ? 'B0' : i === 1 ? 'B1' : i === 2 ? 'B2' : i === 3 ? 'B3' : 'B' + i}</div>
+                        </div>
+                    `;
+                    
+                    // Check if this block is MRU or LRU
+                    if (mruCache.mruStack.length > 0) {
+                        if (value === mruCache.mruStack[0]) {
+                            block.classList.add('mru');
+                        } else if (value === mruCache.mruStack[mruCache.mruStack.length - 1]) {
+                            block.classList.add('lru');
+                        }
+                    }
+                } else {
+                    block.classList.add('empty');
+                    block.innerHTML = `
+                        <div class="block-info">
+                            <div class="block-index">Block ${i}</div>
+                            <div class="block-value">Empty</div>
+                            <div class="block-status">B${i}</div>
+                        </div>
+                    `;
+                }
+                
+                cacheBlocks.appendChild(block);
+            }
+        }
+
+        function updateMRUStackVisualization() {
+            mruStack.innerHTML = '';
+            
+            if (!mruCache || mruCache.mruStack.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = 'stack-empty';
+                emptyMsg.textContent = 'Stack is empty. Start simulation to see MRU ordering.';
+                mruStack.appendChild(emptyMsg);
+                return;
+            }
+            
+            // Display stack from top (MRU) to bottom (LRU)
+            for (let i = 0; i < mruCache.mruStack.length; i++) {
+                const block = document.createElement('div');
+                block.className = 'stack-block';
+                const value = mruCache.mruStack[i];
+                
+                // Find which block this value is stored in
+                const blockPosition = mruCache.blockMap.get(value);
+                const blockLabel = blockPosition !== undefined ? ` (B${blockPosition})` : '';
+                
+                if (i === 0) {
+                    block.classList.add('top');
+                    block.innerHTML = `
+                        ${value}
+                        <div class="stack-label">MRU${blockLabel}</div>
+                    `;
+                } else if (i === mruCache.mruStack.length - 1) {
+                    block.classList.add('bottom');
+                    block.innerHTML = `
+                        ${value}
+                        <div class="stack-label">LRU${blockLabel}</div>
+                    `;
+                } else {
+                    block.innerHTML = `
+                        ${value}
+                        <div class="stack-label">${blockLabel}</div>
+                    `;
+                }
+                
+                mruStack.appendChild(block);
+                
+                // Add connecting line between stack blocks
+                if (i < mruCache.mruStack.length - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'stack-line';
+                    mruStack.appendChild(line);
+                }
+            }
+        }
+
+        function updateReferenceSequenceDisplay() {
+            referenceSequenceDisplay.innerHTML = '';
+            
+            // Get fresh sequence from input
+            referenceSequence = getCurrentSequence();
+            
+            referenceSequence.forEach((value, index) => {
+                const block = document.createElement('div');
+                block.className = 'reference-block';
+                block.textContent = value;
+                
+                if (index < currentStep) {
+                    block.classList.add('processed');
+                } else if (index === currentStep) {
+                    block.classList.add('current');
+                }
+                
+                referenceSequenceDisplay.appendChild(block);
+            });
+        }
+
+        function updateStats() {
+            if (!mruCache) return;
+            
+            const total = mruCache.hits + mruCache.misses;
+            totalRefsEl.textContent = total;
+            hitsEl.textContent = mruCache.hits;
+            missesEl.textContent = mruCache.misses;
+            hitRatioEl.textContent = `${mruCache.getHitRatio().toFixed(1)}%`;
+        }
+
+        function addLogEntry(message, type) {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `Step ${currentStep}: ${message}`;
+            executionLog.appendChild(logEntry);
+            executionLog.scrollTop = executionLog.scrollHeight;
+        }
+
+        function clearLog() {
+            executionLog.innerHTML = '';
+        }
+
+        function simulateStep() {
+            // Get fresh sequence from input every time
+            referenceSequence = getCurrentSequence();
+            
+            if (currentStep >= referenceSequence.length) {
+                statusBar.textContent = 'Simulation complete!';
+                stepBtn.disabled = true;
+                return;
+            }
+            
+            const value = referenceSequence[currentStep];
+            
+            if (!mruCache) {
+                initialize();
+            }
+            
+            const result = mruCache.access(value);
+            
+            // Update visualizations
+            updateCacheVisualization();
+            updateMRUStackVisualization();
+            updateReferenceSequenceDisplay();
+            
+            // Highlight the accessed cache block temporarily
+            highlightAccess(value, result.hit, result.cachePosition);
+            
+            // Update status and log
+            updateStatusAndLog(value, result);
+            
+            updateStats();
+            currentStep++;
+            
+            if (currentStep >= referenceSequence.length) {
+                statusBar.textContent = `Simulation complete! Final hit ratio: ${mruCache.getHitRatio().toFixed(1)}%`;
+                stepBtn.disabled = true;
+            }
+        }
+
+        function highlightAccess(value, isHit, blockPosition) {
+            // Highlight cache blocks
+            const cacheBlockElements = document.querySelectorAll('.cache-block');
+            cacheBlockElements.forEach(block => {
+                const blockValue = block.querySelector('.block-value')?.textContent;
+                if (blockValue === value.toString()) {
+                    block.classList.add(isHit ? 'hit' : 'miss');
+                    setTimeout(() => {
+                        block.classList.remove('hit', 'miss');
+                    }, 500);
+                }
+            });
+            
+            // Highlight MRU stack block
+            const stackBlocks = document.querySelectorAll('.stack-block');
+            stackBlocks.forEach(block => {
+                const blockText = block.textContent;
+                if (blockText.includes(value.toString())) {
+                    block.classList.add(isHit ? 'hit' : 'miss');
+                    setTimeout(() => {
+                        block.classList.remove('hit', 'miss');
+                    }, 500);
+                }
+            });
+        }
+
+        function updateStatusAndLog(value, result) {
+            if (result.hit) {
+                const blockPos = mruCache.blockMap.get(value);
+                statusBar.textContent = `Step ${currentStep + 1}: Access ${value} - HIT in Block ${blockPos} (moved to top of MRU stack)`;
+                addLogEntry(`Access ${value}: HIT in Block ${blockPos} - ${result.stackOperation}`, 'hit');
+            } else {
+                if (result.evicted !== null) {
+                    statusBar.textContent = `Step ${currentStep + 1}: Access ${value} - MISS (evicted MRU ${result.evicted} from Block ${result.cachePosition})`;
+                    addLogEntry(`Access ${value}: MISS - ${result.stackOperation}`, 'evict');
+                } else {
+                    statusBar.textContent = `Step ${currentStep + 1}: Access ${value} - MISS (added to Block ${result.cachePosition})`;
+                    addLogEntry(`Access ${value}: MISS - ${result.stackOperation}`, 'miss');
+                }
+            }
+        }
+
+        function simulateAll() {
+            // Get fresh sequence from input
+            referenceSequence = getCurrentSequence();
+            
+            if (!mruCache) {
+                const size = parseInt(cacheSizeInput.value);
+                mruCache = new MRUCache(size);
+            } else {
+                mruCache.reset();
+            }
+            
+            currentStep = 0;
+            
+            // Fast-forward through all steps
+            while (currentStep < referenceSequence.length) {
+                const value = referenceSequence[currentStep];
+                mruCache.access(value);
+                currentStep++;
+            }
+            
+            updateCacheVisualization();
+            updateMRUStackVisualization();
+            updateReferenceSequenceDisplay();
+            updateStats();
+            
+            // Add final log
+            clearLog();
+            mruCache.accessLog.forEach((log, index) => {
+                if (log.hit) {
+                    addLogEntry(`Access ${log.value}: HIT in Block ${log.cachePosition} - ${log.stackOperation}`, 'hit');
+                } else {
+                    if (log.evicted !== null) {
+                        addLogEntry(`Access ${log.value}: MISS - ${log.stackOperation}`, 'evict');
+                    } else {
+                        addLogEntry(`Access ${log.value}: MISS - ${log.stackOperation}`, 'miss');
+                    }
+                }
+            });
+            
+            statusBar.textContent = `Simulation complete! Final hit ratio: ${mruCache.getHitRatio().toFixed(1)}%`;
+            stepBtn.disabled = true;
+        }
+
+        // Event Listeners
+        simulateBtn.addEventListener('click', simulateAll);
+        stepBtn.addEventListener('click', simulateStep);
+        resetBtn.addEventListener('click', initialize);
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
