@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pseudo-LRU Cache Replacement Simulator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background: #ff6b6b;
+            border: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+        .simulation-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 30px 0;
+            min-height: 500px;
+            position: relative;
+        }
+        .cache-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 150px;
+        }
+        .cache-block {
+            width: 100px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 8px 0;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .block-id {
+            font-size: 12px;
+            color: #ddd;
+            margin-bottom: 2px;
+        }
+        .block-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .lru-column {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            position: relative;
+            width: 400px;
+            margin-right: 50px;
+            padding-top: 25px;
+        }
+        /* LRU squares - now arranged in staircase pattern */
+        .lru-square {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid #FFD700;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            position: absolute;
+            transition: all 0.3s ease;
+            color: #FFD700;
+            z-index: 10;
+            cursor: pointer;
+        }
+        .lru-square:hover {
+            background: rgba(255, 215, 0, 0.5);
+            transform: scale(1.1);
+        }
+        .lru-square.editable {
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        /* Level positions - staircase arrangement */
+        .lru-square.level1 {
+            right: 250px; /* Farthest from cache */
+        }
+        .lru-square.level2 {
+            right: 150px; /* Middle distance */
+        }
+        .lru-square.level3 {
+            right: 50px; /* Closest to cache */
+        }
+        /* Square labels showing between which blocks */
+        .square-label {
+            position: absolute;
+            right: 45px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            white-space: nowrap;
+            text-align: right;
+            width: 80px;
+        }
+        /* Arrow styles - dynamic arrows based on square values */
+        .arrow-container {
+            position: absolute;
+            width: 100px;
+            height: 2px;
+            background: rgba(255, 215, 0, 0.7);
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+        .arrow-head {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .arrow-right .arrow-head {
+            right: 0;
+            top: -4px;
+            border-width: 5px 0 5px 8px;
+            border-color: transparent transparent transparent rgba(255, 215, 0, 0.7);
+        }
+        .arrow-left .arrow-head {
+            left: 0;
+            top: -4px;
+            border-width: 5px 8px 5px 0;
+            border-color: transparent rgba(255, 215, 0, 0.7) transparent transparent;
+        }
+        /* Cache arrows - from level3 squares to cache blocks */
+        .cache-arrow {
+            position: absolute;
+            height: 2px;
+            background: rgba(255, 215, 0, 0.7);
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+        .cache-arrow .arrow-head {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .cache-arrow-right .arrow-head {
+            right: 0;
+            top: -4px;
+            border-width: 5px 0 5px 8px;
+            border-color: transparent transparent transparent rgba(255, 215, 0, 0.7);
+        }
+        .cache-arrow-left .arrow-head {
+            left: 0;
+            top: -4px;
+            border-width: 5px 8px 5px 0;
+            border-color: transparent rgba(255, 215, 0, 0.7) transparent transparent;
+        }
+        /* Vertical alignment lines */
+        .alignment-line {
+            position: absolute;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .hit-block {
+            background: rgba(76, 175, 80, 0.4) !important;
+            border-color: #4CAF50 !important;
+        }
+        .miss-block {
+            background: rgba(244, 67, 54, 0.4) !important;
+            border-color: #F44336 !important;
+        }
+        .active-square {
+            background: rgba(255, 215, 0, 0.8) !important;
+            border-color: #FFD700 !important;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+        .phase-btn {
+            margin: 10px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .step-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            min-height: 80px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+            margin: 5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .legend-lru {
+            background: rgba(255, 215, 0, 0.6);
+            border: 1px solid #FFD700;
+        }
+        .legend-hit {
+            background: rgba(76, 175, 80, 0.4);
+        }
+        .legend-miss {
+            background: rgba(244, 67, 54, 0.4);
+        }
+        .legend-active {
+            background: rgba(255, 215, 0, 0.8);
+        }
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+        .speed-control input {
+            width: 100px;
+        }
+        .dashed-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            border-left: 2px dashed rgba(255, 255, 255, 0.5);
+            transform: translateX(-50%);
+            z-index: -1;
+        }
+        .empty-square {
+            color: rgba(255, 215, 0, 0.3) !important;
+            border-color: rgba(255, 215, 0, 0.3) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+        .cache-config-info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .cache-info-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #FFD700;
+        }
+        .cache-info-box h5 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .cache-info-box ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        .cache-info-box li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .cache-info-box li strong {
+            color: #FFD700;
+        }
+        .note-box {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            font-size: 0.9em;
+        }
+        .configuration-section {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .configuration-section h5 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 8px;
+        }
+        .top-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .simulation-visualization {
+            flex: 3;
+            min-width: 300px;
+        }
+        .input-controls {
+            flex: 1;
+            min-width: 300px;
+        }
+        .simulation-placeholder {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1.2em;
+        }
+        .test-phase-container {
+            display: none;
+        }
+        .test-instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .test-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .test-input input {
+            width: 100px;
+            text-align: center;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .result-correct {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+        }
+        .result-incorrect {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #F44336;
+        }
+        .phase-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .phase-tab {
+            padding: 10px 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .phase-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .phase-tab.active {
+            background: #ff6b6b;
+        }
+        .editable-instruction {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #FFD700;
+        }
+        .phase-content {
+            display: none;
+        }
+        .phase-content.active {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .simulation-container {
+                flex-direction: column;
+            }
+            .lru-column {
+                margin-right: 0;
+                margin-bottom: 30px;
+                width: 100%;
+            }
+            .lru-square.level1 { right: 200px; }
+            .lru-square.level2 { right: 140px; }
+            .lru-square.level3 { right: 80px; }
+            .square-label {
+                display: none;
+            }
+            .top-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Pseudo-LRU Cache Replacement Simulator</h1>
+
+        <div class="phase-tabs">
+            <button class="phase-tab active" data-phase="phase1">Phase 1: Training</button>
+            <button class="phase-tab" data-phase="phase2">Phase 2: Test Yourself</button>
+        </div>
+
+        <!-- Phase 1: Training -->
+        <div class="card p-4 mb-4 phase-content active" id="phase1">
+            <h3>Phase 1: Training</h3>
+
+            <!-- Top Row: Simulation Visualization + Input Controls -->
+            <div class="top-row">
+                <!-- Simulation Visualization -->
+                <div class="simulation-visualization">
+                    <h5 class="mb-3">Simulation Visualization</h5>
+                    <div id="simulation-placeholder" class="simulation-placeholder">
+                        Simulation will appear here after starting
+                    </div>
+                    <div id="simulation" style="display: none;">
+                        <div class="simulation-container">
+                            <!-- LRU Squares Column (Left Side) -->
+                            <div class="lru-column">
+                                <div class="dashed-line"></div>
+                                <!-- LRU squares and arrows will be dynamically added here -->
+                            </div>
+
+                            <!-- Cache Blocks Column (Right Side) -->
+                            <div class="cache-column">
+                                <h5>Cache Blocks</h5>
+                                <!-- Cache blocks will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Controls -->
+                <div class="input-controls">
+                    <div class="configuration-section">
+                        <h5>Configuration</h5>
+                        <div class="mb-3">
+                            <label for="requests" class="form-label">Block Requests (comma-separated):</label>
+                            <input type="text" id="requests" class="form-control"
+                                   placeholder="0,1,2,3,4,5,6,7,8,9,10,1">
+                            <div class="form-text mt-2">
+                                Enter a sequence of memory block numbers to simulate
+                            </div>
+                        </div>
+
+                        <div class="speed-control mt-4">
+                            <label for="speed" class="form-label">Simulation Speed:</label>
+                            <input type="range" id="speed" class="form-range" min="1" max="10" value="5">
+                            <span id="speed-value">5x</span>
+                        </div>
+
+                        <div class="d-flex justify-content-center mt-4">
+                            <button id="start-training" class="btn btn-primary btn-lg">Start Training Simulation</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Controls (shown after starting) -->
+            <div id="simulation-controls" style="display: none;">
+                <div class="step-info" id="step-info">
+                    <strong>Initial State:</strong> Cache is empty. Click "Next Step" to begin simulation.
+                </div>
+
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="hit-count">0</div>
+                        <div class="stat-label">Hit Count</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="miss-count">0</div>
+                        <div class="stat-label">Miss Count</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="hit-rate">0%</div>
+                        <div class="stat-label">Hit Rate</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="step-count">0</div>
+                        <div class="stat-label">Current Step</div>
+                    </div>
+                </div>
+
+                <div class="control-panel">
+                    <button id="prev-step" class="btn btn-primary">Previous Step</button>
+                    <button id="next-step" class="btn btn-primary">Next Step</button>
+                    <button id="auto-run" class="btn btn-primary">Auto Run</button>
+                    <button id="pause" class="btn btn-primary" style="display: none;">Pause</button>
+                    <button id="reset" class="btn btn-primary">Reset</button>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-lru"></div>
+                        <span>PLRU Square (0=down/left, 1=up/right)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-active"></div>
+                        <span>Active/Changed Square</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-hit"></div>
+                        <span>Cache Hit</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-miss"></div>
+                        <span>Cache Miss</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cache Information Section -->
+            <div class="cache-info-box">
+                <h5>About Fully Associative Cache & Pseudo-LRU</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul>
+                            <li><strong>Fully Associative Mapping:</strong> Any memory block can be placed in any cache block, providing maximum flexibility.</li>
+                            <li><strong>Pseudo-LRU Algorithm:</strong> An efficient approximation of true LRU using a binary tree structure with 1-bit per node.</li>
+                            <li><strong>Tree Structure:</strong> For N cache blocks, we need (N-1) PLRU bits. Each bit decides the path to follow.</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul>
+                            <li><strong>Bit Interpretation:</strong>
+                                <ul class="mt-2">
+                                    <li>Bit = 0: Go to left/down subtree</li>
+                                    <li>Bit = 1: Go to right/up subtree</li>
+                                </ul>
+                            </li>
+                            <li><strong>Cache Size:</strong> Can be any power of 2 (4, 8, 16, 32, etc.)</li>
+                            <li><strong>PLRU Bits:</strong> Scale with cache size (N-1 bits for N blocks)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="note-box mt-3">
+                    <strong>Note:</strong> This simulator is configured for <strong>8 cache blocks with 7 PLRU bits</strong>
+                    to demonstrate the algorithm clearly. The tree structure shown represents these 7 bits arranged in 3 levels.
+                    <br><br>
+                    In real systems, cache size can be scaled to any power of 2, and PLRU bits will scale accordingly.
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 2: Test Yourself -->
+        <div class="card p-4 phase-content" id="phase2">
+            <h3>Phase 2: Test Yourself</h3>
+
+            <div class="test-instructions">
+                <p><strong>Instructions:</strong></p>
+                <ol>
+                    <li>Set the PLRU bits by clicking on the squares (they will toggle between 0 and 1)</li>
+                    <li>Enter a block number in the cache (click on cache blocks to set values)</li>
+                    <li>Enter a new block request</li>
+                    <li>Click "Submit Answer" to check if it's a hit or miss</li>
+                    <li>The system will show you the correct answer and explanation</li>
+                </ol>
+                <div class="editable-instruction">
+                    <strong>💡 Click on PLRU squares to change their values (0 ↔ 1)</strong>
+                </div>
+            </div>
+
+            <!-- Test Simulation Visualization -->
+            <div class="simulation-visualization">
+                <h5 class="mb-3">Test Simulation</h5>
+                <div id="test-simulation" class="simulation-container">
+                    <!-- LRU Squares Column (Left Side) -->
+                    <div class="lru-column" id="test-lru-column">
+                        <div class="dashed-line"></div>
+                        <!-- LRU squares will be dynamically added here -->
+                    </div>
+
+                    <!-- Cache Blocks Column (Right Side) -->
+                    <div class="cache-column" id="test-cache-column">
+                        <h5>Cache Blocks</h5>
+                        <!-- Cache blocks will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Controls -->
+            <div class="test-controls">
+                <div class="test-input">
+                    <label for="test-cache-values" class="form-label">Cache Contents:</label>
+                    <input type="text" id="test-cache-values" class="form-control" placeholder="e.g., 0,1,2,3,4,5,6,7">
+                    <button id="set-cache" class="btn btn-primary">Set Cache</button>
+                </div>
+
+                <div class="test-input">
+                    <label for="test-request" class="form-label">Block Request:</label>
+                    <input type="number" id="test-request" class="form-control" placeholder="Enter block">
+                    <button id="submit-test" class="btn btn-primary">Submit Answer</button>
+                </div>
+
+                <div class="test-input">
+                    <button id="random-test" class="btn btn-primary">Random Test</button>
+                    <button id="clear-test" class="btn btn-primary">Clear</button>
+                </div>
+            </div>
+
+            <!-- Result Display -->
+            <div id="test-result" class="result-box">
+                <h4 id="result-title"></h4>
+                <p id="result-message"></p>
+                <div id="result-explanation"></div>
+            </div>
+
+            <!-- Test Statistics -->
+            <div class="stats" id="test-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="test-correct">0</div>
+                    <div class="stat-label">Correct</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="test-incorrect">0</div>
+                    <div class="stat-label">Incorrect</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="test-accuracy">0%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="test-total">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const cacheSize = 8; // Fixed at 8 blocks
+
+        // Phase 1 Variables
+        let requests = [];
+        let currentStep = 0;
+        let cache = [];
+        let lruBits = {};
+        let filledBlocks = 0;
+        let autoRunInterval = null;
+        let simulationSpeed = 5;
+        let isAutoRunning = false;
+        let visibleLRUBits = {};
+
+        // Phase 2 Variables
+        let testCache = new Array(cacheSize).fill(null);
+        let testLRUBits = {};
+        let testVisibleLRUBits = {};
+        let testStats = {
+            correct: 0,
+            incorrect: 0,
+            total: 0,
+            get accuracy() {
+                return this.total > 0 ? Math.round((this.correct / this.total) * 100) : 0;
+            }
+        };
+
+        // Initialize LRU bits for the tree structure
+        function initLRUBits() {
+            // Based on 8 cache blocks, we have 7 squares
+            lruBits = {
+                '3-4': 0, // Level 1: between blocks 3 and 4
+                '1-2': 0, // Level 2: between blocks 1 and 2
+                '5-6': 0, // Level 2: between blocks 5 and 6
+                '0-1': 0, // Level 3: between blocks 0 and 1
+                '2-3': 0, // Level 3: between blocks 2 and 3
+                '4-5': 0, // Level 3: between blocks 4 and 5
+                '6-7': 0  // Level 3: between blocks 6 and 7
+            };
+
+            // Initially, all LRU bits are hidden (empty)
+            visibleLRUBits = {};
+            for (let key in lruBits) {
+                visibleLRUBits[key] = false;
+            }
+        }
+
+        // Initialize Test LRU bits
+        function initTestLRUBits() {
+            testLRUBits = {
+                '3-4': 0,
+                '1-2': 0,
+                '5-6': 0,
+                '0-1': 0,
+                '2-3': 0,
+                '4-5': 0,
+                '6-7': 0
+            };
+
+            testVisibleLRUBits = {};
+            for (let key in testLRUBits) {
+                testVisibleLRUBits[key] = true; // All visible in test phase
+            }
+        }
+
+        // Phase 1 Functions
+        function renderCache() {
+            const container = document.querySelector('.cache-column');
+            if (!container) return;
+
+            // Remove existing blocks except the title
+            const title = container.querySelector('h5');
+            container.innerHTML = '';
+            if (title) container.appendChild(title);
+
+            // Create cache blocks from TOP to BOTTOM (0 at top)
+            for (let i = 0; i < cacheSize; i++) {
+                const block = document.createElement('div');
+                block.className = 'cache-block';
+                block.id = `cache-block-${i}`;
+
+                const blockId = document.createElement('div');
+                blockId.className = 'block-id';
+                blockId.textContent = `Block ${i}`;
+
+                const blockValue = document.createElement('div');
+                blockValue.className = 'block-value';
+                blockValue.textContent = cache[i] !== undefined && cache[i] !== null ? cache[i] : 'Empty';
+
+                block.appendChild(blockId);
+                block.appendChild(blockValue);
+                container.appendChild(block);
+            }
+        }
+
+        function renderLRU() {
+            const container = document.querySelector('.lru-column');
+            if (!container) return;
+
+            // Clear existing content except dashed line
+            const dashedLine = container.querySelector('.dashed-line');
+            container.innerHTML = '';
+            if (dashedLine) container.appendChild(dashedLine);
+
+            // Calculate block positions based on cache blocks
+            const cacheBlocks = document.querySelectorAll('.cache-block');
+            const blockPositions = {};
+
+            if (cacheBlocks.length > 0) {
+                const containerRect = container.getBoundingClientRect();
+
+                for (let i = 0; i < cacheBlocks.length; i++) {
+                    const blockRect = cacheBlocks[i].getBoundingClientRect();
+                    // Calculate position relative to lru-column container
+                    const blockTop = blockRect.top - containerRect.top;
+                    const blockHeight = blockRect.height;
+                    // Center point of the block
+                    blockPositions[i] = blockTop + (blockHeight / 2);
+                }
+            } else {
+                // Fallback calculation if cache blocks aren't rendered
+                const blockHeight = 66; // 50px height + 8px margin * 2
+                for (let i = 0; i < cacheSize; i++) {
+                    blockPositions[i] = i * blockHeight + blockHeight/2;
+                }
+            }
+
+            // Create LRU squares in staircase pattern
+            const squares = [
+                { key: '3-4', level: 'level1', label: 'Between 3-4', alignWith: [3, 4] },
+                { key: '1-2', level: 'level2', label: 'Between 1-2', alignWith: [1, 2] },
+                { key: '5-6', level: 'level2', label: 'Between 5-6', alignWith: [5, 6] },
+                { key: '0-1', level: 'level3', label: 'Between 0-1', alignWith: [0, 1] },
+                { key: '2-3', level: 'level3', label: 'Between 2-3', alignWith: [2, 3] },
+                { key: '4-5', level: 'level3', label: 'Between 4-5', alignWith: [4, 5] },
+                { key: '6-7', level: 'level3', label: 'Between 6-7', alignWith: [6, 7] }
+            ];
+
+            // Create squares with precise vertical alignment
+            squares.forEach(square => {
+                const squareDiv = document.createElement('div');
+                squareDiv.className = `lru-square ${square.level}`;
+                squareDiv.id = `lru-${square.key}`;
+
+                // Show value only if it's visible
+                if (visibleLRUBits[square.key]) {
+                    squareDiv.textContent = lruBits[square.key];
+                    squareDiv.title = `${square.label}: ${lruBits[square.key]} (${lruBits[square.key] === 0 ? 'left/down' : 'right/up'})`;
+                    squareDiv.classList.remove('empty-square');
+                } else {
+                    squareDiv.textContent = '';
+                    squareDiv.title = `${square.label}: Not set yet`;
+                    squareDiv.classList.add('empty-square');
+                }
+
+                // Calculate the middle position between the two cache blocks
+                const block1 = square.alignWith[0];
+                const block2 = square.alignWith[1];
+
+                if (blockPositions[block1] !== undefined && blockPositions[block2] !== undefined) {
+                    // Calculate the exact middle point between the two cache blocks
+                    const middlePosition = (blockPositions[block1] + blockPositions[block2]) / 2;
+                    // Position the square so its center is at the middle position
+                    squareDiv.style.top = `${middlePosition - 20}px`; // Subtract half of square height (40px/2 = 20px)
+                } else {
+                    // Fallback positioning
+                    const blockHeight = 66;
+                    const block1Pos = block1 * blockHeight + blockHeight/2;
+                    const block2Pos = block2 * blockHeight + blockHeight/2;
+                    const middlePosition = (block1Pos + block2Pos) / 2;
+                    squareDiv.style.top = `${middlePosition - 20}px`;
+                }
+
+                const label = document.createElement('div');
+                label.className = 'square-label';
+                label.textContent = square.label;
+
+                squareDiv.appendChild(label);
+                container.appendChild(squareDiv);
+            });
+
+            // Now create arrows based on current values (only for visible bits)
+            createArrows();
+        }
+
+        // Phase 2 Functions
+        function renderTestCache() {
+            const container = document.getElementById('test-cache-column');
+            if (!container) return;
+
+            // Remove existing blocks except the title
+            const title = container.querySelector('h5');
+            container.innerHTML = '';
+            if (title) container.appendChild(title);
+
+            // Create cache blocks from TOP to BOTTOM (0 at top)
+            for (let i = 0; i < cacheSize; i++) {
+                const block = document.createElement('div');
+                block.className = 'cache-block';
+                block.id = `test-cache-block-${i}`;
+                block.dataset.index = i;
+
+                const blockId = document.createElement('div');
+                blockId.className = 'block-id';
+                blockId.textContent = `Block ${i}`;
+
+                const blockValue = document.createElement('div');
+                blockValue.className = 'block-value';
+                blockValue.textContent = testCache[i] !== null ? testCache[i] : 'Empty';
+
+                block.appendChild(blockId);
+                block.appendChild(blockValue);
+
+                // Make cache blocks clickable to edit values
+                block.style.cursor = 'pointer';
+                block.addEventListener('click', function() {
+                    const currentValue = testCache[i];
+                    const newValue = prompt(`Enter new value for Block ${i} (or leave empty to clear):`, currentValue !== null ? currentValue : '');
+                    if (newValue !== null) {
+                        if (newValue.trim() === '') {
+                            testCache[i] = null;
+                        } else {
+                            const numValue = parseInt(newValue);
+                            if (!isNaN(numValue)) {
+                                testCache[i] = numValue;
+                            }
+                        }
+                        renderTestCache();
+                    }
+                });
+
+                container.appendChild(block);
+            }
+        }
+
+        function renderTestLRU() {
+            const container = document.getElementById('test-lru-column');
+            if (!container) return;
+
+            // Clear existing content except dashed line
+            const dashedLine = container.querySelector('.dashed-line');
+            container.innerHTML = '';
+            if (dashedLine) container.appendChild(dashedLine);
+
+            // Calculate block positions based on cache blocks
+            const cacheBlocks = document.querySelectorAll('#test-cache-column .cache-block');
+            const blockPositions = {};
+
+            if (cacheBlocks.length > 0) {
+                const containerRect = container.getBoundingClientRect();
+
+                for (let i = 0; i < cacheBlocks.length; i++) {
+                    const blockRect = cacheBlocks[i].getBoundingClientRect();
+                    // Calculate position relative to lru-column container
+                    const blockTop = blockRect.top - containerRect.top;
+                    const blockHeight = blockRect.height;
+                    // Center point of the block
+                    blockPositions[i] = blockTop + (blockHeight / 2);
+                }
+            } else {
+                // Fallback calculation if cache blocks aren't rendered
+                const blockHeight = 66; // 50px height + 8px margin * 2
+                for (let i = 0; i < cacheSize; i++) {
+                    blockPositions[i] = i * blockHeight + blockHeight/2;
+                }
+            }
+
+            // Create LRU squares in staircase pattern
+            const squares = [
+                { key: '3-4', level: 'level1', label: 'Between 3-4', alignWith: [3, 4] },
+                { key: '1-2', level: 'level2', label: 'Between 1-2', alignWith: [1, 2] },
+                { key: '5-6', level: 'level2', label: 'Between 5-6', alignWith: [5, 6] },
+                { key: '0-1', level: 'level3', label: 'Between 0-1', alignWith: [0, 1] },
+                { key: '2-3', level: 'level3', label: 'Between 2-3', alignWith: [2, 3] },
+                { key: '4-5', level: 'level3', label: 'Between 4-5', alignWith: [4, 5] },
+                { key: '6-7', level: 'level3', label: 'Between 6-7', alignWith: [6, 7] }
+            ];
+
+            // Create squares with precise vertical alignment
+            squares.forEach(square => {
+                const squareDiv = document.createElement('div');
+                squareDiv.className = `lru-square ${square.level} editable`;
+                squareDiv.id = `test-lru-${square.key}`;
+                squareDiv.dataset.key = square.key;
+
+                // Always show value in test phase
+                squareDiv.textContent = testLRUBits[square.key];
+                squareDiv.title = `${square.label}: ${testLRUBits[square.key]} (Click to toggle)`;
+                squareDiv.classList.remove('empty-square');
+
+                // Calculate the middle position between the two cache blocks
+                const block1 = square.alignWith[0];
+                const block2 = square.alignWith[1];
+
+                if (blockPositions[block1] !== undefined && blockPositions[block2] !== undefined) {
+                    const middlePosition = (blockPositions[block1] + blockPositions[block2]) / 2;
+                    squareDiv.style.top = `${middlePosition - 20}px`;
+                } else {
+                    const blockHeight = 66;
+                    const block1Pos = block1 * blockHeight + blockHeight/2;
+                    const block2Pos = block2 * blockHeight + blockHeight/2;
+                    const middlePosition = (block1Pos + block2Pos) / 2;
+                    squareDiv.style.top = `${middlePosition - 20}px`;
+                }
+
+                const label = document.createElement('div');
+                label.className = 'square-label';
+                label.textContent = square.label;
+
+                squareDiv.appendChild(label);
+
+                // Add click event to toggle value
+                squareDiv.addEventListener('click', function() {
+                    const key = this.dataset.key;
+                    testLRUBits[key] = testLRUBits[key] === 0 ? 1 : 0;
+                    renderTestLRU();
+                });
+
+                container.appendChild(squareDiv);
+            });
+
+            // Create arrows based on current values
+            createTestArrows();
+        }
+
+        function createTestArrows() {
+            const container = document.getElementById('test-lru-column');
+            if (!container) return;
+
+            // Remove existing arrows
+            container.querySelectorAll('.arrow-container, .cache-arrow').forEach(el => el.remove());
+
+            // Create arrows for all LRU bits
+            createTestArrowBetweenSquares('3-4', '1-2', testLRUBits['3-4'] === 1);
+            createTestArrowBetweenSquares('3-4', '5-6', testLRUBits['3-4'] === 0);
+
+            createTestArrowBetweenSquares('1-2', '0-1', testLRUBits['1-2'] === 1);
+            createTestArrowBetweenSquares('1-2', '2-3', testLRUBits['1-2'] === 0);
+
+            createTestArrowBetweenSquares('5-6', '4-5', testLRUBits['5-6'] === 1);
+            createTestArrowBetweenSquares('5-6', '6-7', testLRUBits['5-6'] === 0);
+
+            // Create arrows from level3 squares to cache blocks
+            createTestArrowToCache('0-1', 0, testLRUBits['0-1'] === 1);
+            createTestArrowToCache('0-1', 1, testLRUBits['0-1'] === 0);
+
+            createTestArrowToCache('2-3', 2, testLRUBits['2-3'] === 1);
+            createTestArrowToCache('2-3', 3, testLRUBits['2-3'] === 0);
+
+            createTestArrowToCache('4-5', 4, testLRUBits['4-5'] === 1);
+            createTestArrowToCache('4-5', 5, testLRUBits['4-5'] === 0);
+
+            createTestArrowToCache('6-7', 6, testLRUBits['6-7'] === 1);
+            createTestArrowToCache('6-7', 7, testLRUBits['6-7'] === 0);
+        }
+
+        function createTestArrowBetweenSquares(fromSquare, toSquare, isVisible) {
+            if (!isVisible) return;
+
+            const fromEl = document.getElementById(`test-lru-${fromSquare}`);
+            const toEl = document.getElementById(`test-lru-${toSquare}`);
+            if (!fromEl || !toEl) return;
+
+            const container = document.getElementById('test-lru-column');
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+
+            // Calculate positions relative to container
+            const fromX = fromRect.left - containerRect.left + fromRect.width;
+            const fromY = fromRect.top - containerRect.top + fromRect.height / 2;
+            const toX = toRect.left - containerRect.left;
+            const toY = toRect.top - containerRect.top + toRect.height / 2;
+
+            // Create arrow
+            const arrow = document.createElement('div');
+            arrow.className = 'arrow-container arrow-right';
+
+            const length = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
+            const angle = Math.atan2(toY - fromY, toX - fromX) * (180 / Math.PI);
+
+            arrow.style.width = `${length}px`;
+            arrow.style.left = `${fromX}px`;
+            arrow.style.top = `${fromY}px`;
+            arrow.style.transform = `rotate(${angle}deg)`;
+            arrow.style.transformOrigin = '0 0';
+
+            const arrowHead = document.createElement('div');
+            arrowHead.className = 'arrow-head';
+            arrow.appendChild(arrowHead);
+
+            container.appendChild(arrow);
+        }
+
+        function createTestArrowToCache(fromSquare, toBlock, isVisible) {
+            if (!isVisible) return;
+
+            const fromEl = document.getElementById(`test-lru-${fromSquare}`);
+            const toEl = document.getElementById(`test-cache-block-${toBlock}`);
+            if (!fromEl || !toEl) return;
+
+            const lruContainer = document.getElementById('test-lru-column');
+            const cacheContainer = document.getElementById('test-cache-column');
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const lruRect = lruContainer.getBoundingClientRect();
+            const cacheRect = cacheContainer.getBoundingClientRect();
+
+            // Calculate positions
+            const fromX = fromRect.left - lruRect.left + fromRect.width;
+            const fromY = fromRect.top - lruRect.top + fromRect.height / 2;
+            const toX = toRect.left - cacheRect.left;
+            const toY = toRect.top - cacheRect.top + toRect.height / 2;
+
+            // Adjust for cache container position relative to lru container
+            const cacheOffsetX = cacheRect.left - lruRect.left;
+            const cacheOffsetY = cacheRect.top - lruRect.top;
+
+            const finalToX = toX + cacheOffsetX;
+            const finalToY = toY + cacheOffsetY;
+
+            // Create arrow
+            const arrow = document.createElement('div');
+            arrow.className = 'cache-arrow cache-arrow-right';
+
+            const length = Math.sqrt(Math.pow(finalToX - fromX, 2) + Math.pow(finalToY - fromY, 2));
+            const angle = Math.atan2(finalToY - fromY, finalToX - fromX) * (180 / Math.PI);
+
+            arrow.style.width = `${length}px`;
+            arrow.style.left = `${fromX}px`;
+            arrow.style.top = `${fromY}px`;
+            arrow.style.transform = `rotate(${angle}deg)`;
+            arrow.style.transformOrigin = '0 0';
+
+            const arrowHead = document.createElement('div');
+            arrowHead.className = 'arrow-head';
+            arrow.appendChild(arrowHead);
+
+            lruContainer.appendChild(arrow);
+        }
+
+        // Test Answer Checking
+        function checkTestAnswer(request) {
+            const requestNum = parseInt(request);
+            if (isNaN(requestNum)) {
+                return { error: "Please enter a valid block number" };
+            }
+
+            // Check if request is in cache
+            const isHit = testCache.includes(requestNum);
+            const filledBlocks = testCache.filter(x => x !== null).length;
+
+            if (isHit) {
+                return {
+                    type: 'hit',
+                    message: `Block ${requestNum} is in the cache.`,
+                    explanation: `The block was found in cache position ${testCache.indexOf(requestNum)}.`,
+                    correct: true
+                };
+            } else {
+                // Find which block would be replaced using current PLRU bits
+                const replaceIndex = findTestReplacement();
+                const replacedBlock = testCache[replaceIndex];
+
+                return {
+                    type: 'miss',
+                    message: `Block ${requestNum} is NOT in the cache.`,
+                    explanation: `Based on the current PLRU bits, Block ${replaceIndex} would be replaced (currently containing ${replacedBlock !== null ? replacedBlock : 'nothing'}).`,
+                    replaceIndex: replaceIndex,
+                    correct: true
+                };
+            }
+        }
+
+        function findTestReplacement() {
+            // Start from root (3-4) and follow the path
+            let current = '3-4';
+
+            if (testLRUBits[current] === 1) {
+                current = '1-2';
+                if (testLRUBits[current] === 1) {
+                    current = '0-1';
+                    return testLRUBits[current] === 1 ? 0 : 1;
+                } else {
+                    current = '2-3';
+                    return testLRUBits[current] === 1 ? 2 : 3;
+                }
+            } else {
+                current = '5-6';
+                if (testLRUBits[current] === 1) {
+                    current = '4-5';
+                    return testLRUBits[current] === 1 ? 4 : 5;
+                } else {
+                    current = '6-7';
+                    return testLRUBits[current] === 1 ? 6 : 7;
+                }
+            }
+        }
+
+        function showTestResult(result, userAnswer) {
+            const resultBox = document.getElementById('test-result');
+            const resultTitle = document.getElementById('result-title');
+            const resultMessage = document.getElementById('result-message');
+            const resultExplanation = document.getElementById('result-explanation');
+
+            if (result.error) {
+                resultBox.className = 'result-box result-incorrect';
+                resultTitle.textContent = 'Error';
+                resultMessage.textContent = result.error;
+                resultExplanation.innerHTML = '';
+                resultBox.style.display = 'block';
+                return;
+            }
+
+            // Update statistics
+            testStats.total++;
+            if (result.correct) {
+                testStats.correct++;
+                resultBox.className = 'result-box result-correct';
+                resultTitle.textContent = '✓ Correct!';
+            } else {
+                testStats.incorrect++;
+                resultBox.className = 'result-box result-incorrect';
+                resultTitle.textContent = '✗ Incorrect';
+            }
+
+            resultMessage.textContent = result.message;
+            resultExplanation.innerHTML = `<strong>Explanation:</strong> ${result.explanation}`;
+
+            // Update statistics display
+            document.getElementById('test-correct').textContent = testStats.correct;
+            document.getElementById('test-incorrect').textContent = testStats.incorrect;
+            document.getElementById('test-accuracy').textContent = `${testStats.accuracy}%`;
+            document.getElementById('test-total').textContent = testStats.total;
+
+            resultBox.style.display = 'block';
+        }
+
+        function generateRandomTest() {
+            // Generate random cache contents (some empty, some filled)
+            testCache = new Array(cacheSize).fill(null);
+            const numFilled = Math.floor(Math.random() * cacheSize) + 1;
+            const usedNumbers = new Set();
+
+            for (let i = 0; i < numFilled; i++) {
+                let randomNum;
+                do {
+                    randomNum = Math.floor(Math.random() * 20); // Numbers 0-19
+                } while (usedNumbers.has(randomNum));
+
+                testCache[i] = randomNum;
+                usedNumbers.add(randomNum);
+            }
+
+            // Generate random PLRU bits
+            for (let key in testLRUBits) {
+                testLRUBits[key] = Math.random() > 0.5 ? 1 : 0;
+            }
+
+            // Generate a random request (might be in cache or not)
+            const allNumbers = Array.from({length: 20}, (_, i) => i);
+            const request = allNumbers[Math.floor(Math.random() * allNumbers.length)];
+
+            // Update UI
+            document.getElementById('test-cache-values').value = testCache.filter(x => x !== null).join(',');
+            document.getElementById('test-request').value = request;
+
+            renderTestCache();
+            renderTestLRU();
+
+            document.getElementById('test-result').style.display = 'none';
+        }
+
+        function clearTest() {
+            testCache = new Array(cacheSize).fill(null);
+            initTestLRUBits();
+
+            document.getElementById('test-cache-values').value = '';
+            document.getElementById('test-request').value = '';
+            document.getElementById('test-result').style.display = 'none';
+
+            renderTestCache();
+            renderTestLRU();
+        }
+
+        // Phase 1 Functions (continued from previous code)
+        function createArrows() {
+            const container = document.querySelector('.lru-column');
+            if (!container) return;
+
+            // Remove existing arrows
+            document.querySelectorAll('.arrow-container, .cache-arrow').forEach(el => el.remove());
+
+            // Create arrows only for visible LRU bits
+            if (visibleLRUBits['3-4']) {
+                createArrowBetweenSquares('3-4', '1-2', lruBits['3-4'] === 1);
+                createArrowBetweenSquares('3-4', '5-6', lruBits['3-4'] === 0);
+            }
+
+            if (visibleLRUBits['1-2']) {
+                createArrowBetweenSquares('1-2', '0-1', lruBits['1-2'] === 1);
+                createArrowBetweenSquares('1-2', '2-3', lruBits['1-2'] === 0);
+            }
+
+            if (visibleLRUBits['5-6']) {
+                createArrowBetweenSquares('5-6', '4-5', lruBits['5-6'] === 1);
+                createArrowBetweenSquares('5-6', '6-7', lruBits['5-6'] === 0);
+            }
+
+            // Create arrows from level3 squares to cache blocks (only for visible)
+            if (visibleLRUBits['0-1']) {
+                createArrowToCache('0-1', 0, lruBits['0-1'] === 1);
+                createArrowToCache('0-1', 1, lruBits['0-1'] === 0);
+            }
+
+            if (visibleLRUBits['2-3']) {
+                createArrowToCache('2-3', 2, lruBits['2-3'] === 1);
+                createArrowToCache('2-3', 3, lruBits['2-3'] === 0);
+            }
+
+            if (visibleLRUBits['4-5']) {
+                createArrowToCache('4-5', 4, lruBits['4-5'] === 1);
+                createArrowToCache('4-5', 5, lruBits['4-5'] === 0);
+            }
+
+            if (visibleLRUBits['6-7']) {
+                createArrowToCache('6-7', 6, lruBits['6-7'] === 1);
+                createArrowToCache('6-7', 7, lruBits['6-7'] === 0);
+            }
+        }
+
+        function createArrowBetweenSquares(fromSquare, toSquare, isVisible) {
+            if (!isVisible || !visibleLRUBits[fromSquare] || !visibleLRUBits[toSquare]) return;
+
+            const fromEl = document.getElementById(`lru-${fromSquare}`);
+            const toEl = document.getElementById(`lru-${toSquare}`);
+            if (!fromEl || !toEl) return;
+
+            const container = document.querySelector('.lru-column');
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+
+            // Calculate positions relative to container
+            const fromX = fromRect.left - containerRect.left + fromRect.width;
+            const fromY = fromRect.top - containerRect.top + fromRect.height / 2;
+            const toX = toRect.left - containerRect.left;
+            const toY = toRect.top - containerRect.top + toRect.height / 2;
+
+            // Create arrow
+            const arrow = document.createElement('div');
+            arrow.className = 'arrow-container arrow-right';
+
+            const length = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
+            const angle = Math.atan2(toY - fromY, toX - fromX) * (180 / Math.PI);
+
+            arrow.style.width = `${length}px`;
+            arrow.style.left = `${fromX}px`;
+            arrow.style.top = `${fromY}px`;
+            arrow.style.transform = `rotate(${angle}deg)`;
+            arrow.style.transformOrigin = '0 0';
+
+            const arrowHead = document.createElement('div');
+            arrowHead.className = 'arrow-head';
+            arrow.appendChild(arrowHead);
+
+            container.appendChild(arrow);
+        }
+
+        function createArrowToCache(fromSquare, toBlock, isVisible) {
+            if (!isVisible || !visibleLRUBits[fromSquare]) return;
+
+            const fromEl = document.getElementById(`lru-${fromSquare}`);
+            const toEl = document.getElementById(`cache-block-${toBlock}`);
+            if (!fromEl || !toEl) return;
+
+            const lruContainer = document.querySelector('.lru-column');
+            const cacheContainer = document.querySelector('.cache-column');
+
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const lruRect = lruContainer.getBoundingClientRect();
+            const cacheRect = cacheContainer.getBoundingClientRect();
+
+            // Calculate positions
+            const fromX = fromRect.left - lruRect.left + fromRect.width;
+            const fromY = fromRect.top - lruRect.top + fromRect.height / 2;
+            const toX = toRect.left - cacheRect.left;
+            const toY = toRect.top - cacheRect.top + toRect.height / 2;
+
+            // Adjust for cache container position relative to lru container
+            const cacheOffsetX = cacheRect.left - lruRect.left;
+            const cacheOffsetY = cacheRect.top - lruRect.top;
+
+            const finalToX = toX + cacheOffsetX;
+            const finalToY = toY + cacheOffsetY;
+
+            // Create arrow
+            const arrow = document.createElement('div');
+            arrow.className = 'cache-arrow cache-arrow-right';
+
+            const length = Math.sqrt(Math.pow(finalToX - fromX, 2) + Math.pow(finalToY - fromY, 2));
+            const angle = Math.atan2(finalToY - fromY, finalToX - fromX) * (180 / Math.PI);
+
+            arrow.style.width = `${length}px`;
+            arrow.style.left = `${fromX}px`;
+            arrow.style.top = `${fromY}px`;
+            arrow.style.transform = `rotate(${angle}deg)`;
+            arrow.style.transformOrigin = '0 0';
+
+            const arrowHead = document.createElement('div');
+            arrowHead.className = 'arrow-head';
+            arrow.appendChild(arrowHead);
+
+            lruContainer.appendChild(arrow);
+        }
+
+        function simulateStep() {
+            if (currentStep >= requests.length) {
+                document.getElementById('step-info').innerHTML =
+                    `<strong>Simulation Complete!</strong> All requests processed.`;
+                stopAutoRun();
+                return;
+            }
+
+            const request = requests[currentStep];
+            let isHit = cache.includes(request);
+            let stepInfo = '';
+
+            // Update statistics
+            document.getElementById('step-count').textContent = currentStep + 1;
+
+            if (isHit) {
+                document.getElementById('hit-count').textContent = parseInt(document.getElementById('hit-count').textContent) + 1;
+                stepInfo = `Step ${currentStep + 1}: Request <strong>${request}</strong> - <span style="color: #4CAF50">HIT</span> (Block found in cache)`;
+                updateLRUForHit(request);
+
+                // Highlight the cache block
+                const hitIndex = cache.indexOf(request);
+                const block = document.getElementById(`cache-block-${hitIndex}`);
+                if (block) {
+                    block.classList.add('hit-block');
+                    setTimeout(() => block.classList.remove('hit-block'), 1000);
+                }
+            } else {
+                document.getElementById('miss-count').textContent = parseInt(document.getElementById('miss-count').textContent) + 1;
+
+                if (filledBlocks < cacheSize) {
+                    stepInfo = `Step ${currentStep + 1}: Request <strong>${request}</strong> - <span style="color: #F44336">MISS</span> (Cache has space, filling next block)`;
+                    fillNextBlock(request);
+                } else {
+                    stepInfo = `Step ${currentStep + 1}: Request <strong>${request}</strong> - <span style="color: #F44336">MISS</span> (Cache full, replacing using PLRU)`;
+                    const replaceIndex = findReplacement();
+                    cache[replaceIndex] = request;
+                    updateLRUForMiss(replaceIndex);
+
+                    // Highlight the replaced cache block
+                    const block = document.getElementById(`cache-block-${replaceIndex}`);
+                    if (block) {
+                        block.classList.add('miss-block');
+                        setTimeout(() => block.classList.remove('miss-block'), 1000);
+                    }
+                }
+            }
+
+            // Update hit rate
+            const hitCount = parseInt(document.getElementById('hit-count').textContent);
+            const missCount = parseInt(document.getElementById('miss-count').textContent);
+            const total = hitCount + missCount;
+            const hitRate = total > 0 ? Math.round((hitCount / total) * 100) : 0;
+            document.getElementById('hit-rate').textContent = `${hitRate}%`;
+
+            document.getElementById('step-info').innerHTML = stepInfo;
+            renderCache();
+            renderLRU();
+            currentStep++;
+        }
+
+        function fillNextBlock(request) {
+            // Follow the exact sequence from your description, making LRU bits visible as we go
+            if (filledBlocks === 0) { // Block 0
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('0-1');
+                lruBits['3-4'] = 1;
+                lruBits['1-2'] = 1;
+                lruBits['0-1'] = 1;
+                cache[0] = request;
+                highlightSquare('3-4');
+                highlightSquare('1-2');
+                highlightSquare('0-1');
+            } else if (filledBlocks === 1) { // Block 1
+                makeLRUBitVisible('0-1');
+                lruBits['0-1'] = 0;
+                cache[1] = request;
+                highlightSquare('0-1');
+            } else if (filledBlocks === 2) { // Block 2
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('2-3');
+                lruBits['1-2'] = 0;
+                lruBits['2-3'] = 1;
+                cache[2] = request;
+                highlightSquare('1-2');
+                highlightSquare('2-3');
+            } else if (filledBlocks === 3) { // Block 3
+                makeLRUBitVisible('2-3');
+                lruBits['2-3'] = 0;
+                cache[3] = request;
+                highlightSquare('2-3');
+            } else if (filledBlocks === 4) { // Block 4
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('4-5');
+                lruBits['3-4'] = 0;
+                lruBits['5-6'] = 1;
+                lruBits['4-5'] = 1;
+                cache[4] = request;
+                highlightSquare('3-4');
+                highlightSquare('5-6');
+                highlightSquare('4-5');
+            } else if (filledBlocks === 5) { // Block 5
+                makeLRUBitVisible('4-5');
+                lruBits['4-5'] = 0;
+                cache[5] = request;
+                highlightSquare('4-5');
+            } else if (filledBlocks === 6) { // Block 6
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('6-7');
+                lruBits['5-6'] = 0;
+                lruBits['6-7'] = 1;
+                cache[6] = request;
+                highlightSquare('5-6');
+                highlightSquare('6-7');
+            } else if (filledBlocks === 7) { // Block 7
+                makeLRUBitVisible('6-7');
+                lruBits['6-7'] = 0;
+                cache[7] = request;
+                highlightSquare('6-7');
+            }
+            filledBlocks++;
+        }
+
+        function findReplacement() {
+            // Start from root (3-4) and follow the path
+            let path = [];
+            let current = '3-4';
+            path.push(current);
+            makeLRUBitVisible(current);
+            lruBits[current] = 1 - lruBits[current]; // Flip the bit
+
+            if (lruBits[current] === 1) {
+                current = '1-2';
+                path.push(current);
+                makeLRUBitVisible(current);
+                lruBits[current] = 1 - lruBits[current];
+                if (lruBits[current] === 1) {
+                    current = '0-1';
+                    path.push(current);
+                    makeLRUBitVisible(current);
+                    lruBits[current] = 1 - lruBits[current];
+                    highlightSquares(path);
+                    return lruBits[current] === 1 ? 0 : 1;
+                } else {
+                    current = '2-3';
+                    path.push(current);
+                    makeLRUBitVisible(current);
+                    lruBits[current] = 1 - lruBits[current];
+                    highlightSquares(path);
+                    return lruBits[current] === 1 ? 2 : 3;
+                }
+            } else {
+                current = '5-6';
+                path.push(current);
+                makeLRUBitVisible(current);
+                lruBits[current] = 1 - lruBits[current];
+                if (lruBits[current] === 1) {
+                    current = '4-5';
+                    path.push(current);
+                    makeLRUBitVisible(current);
+                    lruBits[current] = 1 - lruBits[current];
+                    highlightSquares(path);
+                    return lruBits[current] === 1 ? 4 : 5;
+                } else {
+                    current = '6-7';
+                    path.push(current);
+                    makeLRUBitVisible(current);
+                    lruBits[current] = 1 - lruBits[current];
+                    highlightSquares(path);
+                    return lruBits[current] === 1 ? 6 : 7;
+                }
+            }
+        }
+
+        function highlightSquares(squares) {
+            squares.forEach(square => {
+                highlightSquare(square);
+            });
+        }
+
+        function updateLRUForHit(block) {
+            const index = cache.indexOf(block);
+            let squaresToUpdate = [];
+
+            if (index === 0) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('0-1');
+                lruBits['3-4'] = 1;
+                lruBits['1-2'] = 1;
+                lruBits['0-1'] = 1;
+                squaresToUpdate = ['3-4', '1-2', '0-1'];
+            } else if (index === 1) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('0-1');
+                lruBits['3-4'] = 1;
+                lruBits['1-2'] = 1;
+                lruBits['0-1'] = 0;
+                squaresToUpdate = ['3-4', '1-2', '0-1'];
+            } else if (index === 2) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('2-3');
+                lruBits['3-4'] = 1;
+                lruBits['1-2'] = 0;
+                lruBits['2-3'] = 1;
+                squaresToUpdate = ['3-4', '1-2', '2-3'];
+            } else if (index === 3) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('1-2');
+                makeLRUBitVisible('2-3');
+                lruBits['3-4'] = 1;
+                lruBits['1-2'] = 0;
+                lruBits['2-3'] = 0;
+                squaresToUpdate = ['3-4', '1-2', '2-3'];
+            } else if (index === 4) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('4-5');
+                lruBits['3-4'] = 0;
+                lruBits['5-6'] = 1;
+                lruBits['4-5'] = 1;
+                squaresToUpdate = ['3-4', '5-6', '4-5'];
+            } else if (index === 5) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('4-5');
+                lruBits['3-4'] = 0;
+                lruBits['5-6'] = 1;
+                lruBits['4-5'] = 0;
+                squaresToUpdate = ['3-4', '5-6', '4-5'];
+            } else if (index === 6) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('6-7');
+                lruBits['3-4'] = 0;
+                lruBits['5-6'] = 0;
+                lruBits['6-7'] = 1;
+                squaresToUpdate = ['3-4', '5-6', '6-7'];
+            } else if (index === 7) {
+                makeLRUBitVisible('3-4');
+                makeLRUBitVisible('5-6');
+                makeLRUBitVisible('6-7');
+                lruBits['3-4'] = 0;
+                lruBits['5-6'] = 0;
+                lruBits['6-7'] = 0;
+                squaresToUpdate = ['3-4', '5-6', '6-7'];
+            }
+
+            highlightSquares(squaresToUpdate);
+        }
+
+        function updateLRUForMiss(index) {
+            // After replacement, update LRU to point to the new block
+            updateLRUForHit(cache[index]);
+        }
+
+        function startAutoRun() {
+            if (isAutoRunning) return;
+
+            isAutoRunning = true;
+            document.getElementById('auto-run').style.display = 'none';
+            document.getElementById('pause').style.display = 'inline-block';
+
+            const interval = 2000 / simulationSpeed;
+            autoRunInterval = setInterval(() => {
+                simulateStep();
+                if (currentStep >= requests.length) {
+                    stopAutoRun();
+                }
+            }, interval);
+        }
+
+        function stopAutoRun() {
+            isAutoRunning = false;
+            clearInterval(autoRunInterval);
+            document.getElementById('auto-run').style.display = 'inline-block';
+            document.getElementById('pause').style.display = 'none';
+        }
+
+        function resetSimulation() {
+            stopAutoRun();
+            currentStep = 0;
+            cache = new Array(cacheSize);
+            filledBlocks = 0;
+            initLRUBits();
+
+            // Hide simulation controls and show placeholder
+            document.getElementById('simulation-controls').style.display = 'none';
+            document.getElementById('simulation-placeholder').style.display = 'flex';
+            document.getElementById('simulation').style.display = 'none';
+
+            // Show start button again
+            document.getElementById('start-training').style.display = 'block';
+
+            // Reset stats
+            document.getElementById('hit-count').textContent = '0';
+            document.getElementById('miss-count').textContent = '0';
+            document.getElementById('hit-rate').textContent = '0%';
+            document.getElementById('step-count').textContent = '0';
+        }
+
+        // Phase Switching
+        function switchPhase(phase) {
+            // Update tabs
+            document.querySelectorAll('.phase-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.phase-tab[data-phase="${phase}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.phase-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(phase).classList.add('active');
+
+            // Initialize test phase if needed
+            if (phase === 'phase2') {
+                initTestPhase();
+            }
+        }
+
+        function initTestPhase() {
+            initTestLRUBits();
+            renderTestCache();
+            renderTestLRU();
+        }
+
+        function makeLRUBitVisible(squareKey) {
+            visibleLRUBits[squareKey] = true;
+        }
+
+        function highlightSquare(squareKey) {
+            // Make sure the square is visible first
+            makeLRUBitVisible(squareKey);
+
+            // Remove active class from all squares
+            document.querySelectorAll('.lru-square').forEach(sq => {
+                sq.classList.remove('active-square');
+            });
+
+            // Add active class to specified square
+            const square = document.getElementById(`lru-${squareKey}`);
+            if (square) {
+                square.classList.add('active-square');
+                setTimeout(() => {
+                    square.classList.remove('active-square');
+                    renderLRU(); // Re-render to update value display
+                }, 1000);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with default values
+            initLRUBits();
+
+            // Speed control
+            const speedControl = document.getElementById('speed');
+            const speedValue = document.getElementById('speed-value');
+
+            speedControl.addEventListener('input', function() {
+                simulationSpeed = this.value;
+                speedValue.textContent = `${this.value}x`;
+                if (isAutoRunning) {
+                    stopAutoRun();
+                    startAutoRun();
+                }
+            });
+
+            // Phase tabs
+            document.querySelectorAll('.phase-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const phase = this.dataset.phase;
+                    switchPhase(phase);
+                });
+            });
+
+            // Start training button
+            document.getElementById('start-training').addEventListener('click', function() {
+                const inputValue = document.getElementById('requests').value.trim();
+
+                // If input is empty, use the default sequence from placeholder
+                if (inputValue === '') {
+                    requests = [0,1,2,3,4,5,6,7,8,9,10,1];
+                } else {
+                    requests = inputValue
+                        .split(',')
+                        .map(x => parseInt(x.trim()))
+                        .filter(x => !isNaN(x));
+                }
+
+                if (requests.length === 0) {
+                    alert('Please enter valid block requests');
+                    return;
+                }
+
+                cache = new Array(cacheSize);
+                filledBlocks = 0;
+                currentStep = 0;
+                initLRUBits();
+
+                // Hide placeholder and show simulation
+                document.getElementById('simulation-placeholder').style.display = 'none';
+                document.getElementById('simulation').style.display = 'block';
+                document.getElementById('simulation-controls').style.display = 'block';
+
+                // Hide start button
+                this.style.display = 'none';
+
+                renderCache();
+                renderLRU();
+
+                // Reset stats
+                document.getElementById('hit-count').textContent = '0';
+                document.getElementById('miss-count').textContent = '0';
+                document.getElementById('hit-rate').textContent = '0%';
+                document.getElementById('step-count').textContent = '0';
+
+                document.getElementById('step-info').innerHTML =
+                    '<strong>Ready:</strong> Click "Next Step" to begin simulation.';
+            });
+
+            // Control buttons
+            document.getElementById('next-step').addEventListener('click', simulateStep);
+
+            document.getElementById('prev-step').addEventListener('click', function() {
+                if (currentStep > 1) {
+                    currentStep -= 2;
+                    // Need to restore previous state - for simplicity, we'll reset and replay
+                    alert('Previous step functionality requires state tracking. Please use Reset and step through again.');
+                }
+            });
+
+            document.getElementById('auto-run').addEventListener('click', startAutoRun);
+
+            document.getElementById('pause').addEventListener('click', stopAutoRun);
+
+            document.getElementById('reset').addEventListener('click', resetSimulation);
+
+            // Test phase controls
+            document.getElementById('submit-test').addEventListener('click', function() {
+                const request = document.getElementById('test-request').value;
+                const result = checkTestAnswer(request);
+                showTestResult(result);
+            });
+
+            document.getElementById('set-cache').addEventListener('click', function() {
+                const cacheValues = document.getElementById('test-cache-values').value;
+                if (cacheValues.trim() === '') {
+                    testCache = new Array(cacheSize).fill(null);
+                } else {
+                    const values = cacheValues.split(',').map(x => {
+                        const val = parseInt(x.trim());
+                        return isNaN(val) ? null : val;
+                    });
+                    for (let i = 0; i < Math.min(cacheSize, values.length); i++) {
+                        testCache[i] = values[i];
+                    }
+                }
+                renderTestCache();
+                renderTestLRU();
+            });
+
+            document.getElementById('random-test').addEventListener('click', generateRandomTest);
+
+            document.getElementById('clear-test').addEventListener('click', clearTest);
+
+            // Initialize test phase
+            initTestPhase();
+        });
+    </script>
+</body>
+</html>
