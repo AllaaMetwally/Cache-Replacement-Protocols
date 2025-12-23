@@ -12,7 +12,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 
 👉 [RUN Protocol](https://allaametwally.github.io/Cache-Replacement-Protocols/FIFO.html)
 
---
+----
+
 
 ### 2. LIFO ( Last-In, First-Out ) Protocol :
 
@@ -21,7 +22,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
    
 👉 [RUN Protocol](https://allaametwally.github.io/Cache-Replacement-Protocols/LIFO.html)
 
---
+----
+
 
 ### 3.MRU ( Most Recently Used ) Protocol :
 
