@@ -1,4 +1,6 @@
 # 💾 Cache Replacement Protocols
+
+
 ## 📌 Overview
 Implementation and analysis of 5 essential cache replacement algorithms used in computer architecture to optimize memory performance.
 
@@ -25,6 +27,7 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 ----
 
 
+
 ### 3.MRU ( Most Recently Used ) Protocol :
 
           How it works: Removes most recently accessed
@@ -32,7 +35,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 
 👉 [RUN Protocol](https://allaametwally.github.io/Cache-Replacement-Protocols/MRU.html)
 
---
+----
+
 
 ### 4. LRU ( Least Recently Used ) Protocol :
 
@@ -41,7 +45,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
           
 👉 [RUN Protocol](https://allaametwally.github.io/Cache-Replacement-Protocols/LRU.html)
 
---
+-----
+
 
 ### 5. PLRU ( Pseudo-LRU ) Protocol :
          
@@ -50,7 +55,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 
 👉 [RUN Protocol](https://allaametwally.github.io/Cache-Replacement-Protocols/PLRU.html)
 
--- 
+-----
+
 
 ## Team Members :
 
@@ -63,4 +69,7 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 🔗 Resources
 📊 [Presentation](https://view.genially.com/69375fd4c705531561e43ae1/presentation-cache-replacement-protocols) - Complete project explanation
 ▶️ [Code Tutorial](https://drive.google.com/file/d/1PmZxB2BQc9oaO3cBsjFwj4Yjdjj5CUpx/view?usp=sharing) - How to run and understand the code
+
+----
+
 
