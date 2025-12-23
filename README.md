@@ -66,7 +66,8 @@ Implementation and analysis of 5 essential cache replacement algorithms used in 
 - Alaa Ashraf Metwally
 - Shahd Ebrahim Elsawy
 
-🔗 Resources
+## 🔗 Resources
+
 📊 [Presentation](https://view.genially.com/69375fd4c705531561e43ae1/presentation-cache-replacement-protocols) - Complete project explanation
 
 
